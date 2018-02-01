@@ -9,6 +9,7 @@ QT       += core
 QT       += network
 QT       += widgets
 QT       += core websockets
+QT       += gamepad
 
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
@@ -37,7 +38,9 @@ SOURCES += \
     ledindicator.cpp \
     qledindicator.cpp \
     clientsocket.cpp \
-    clientsocket2.cpp
+    clientsocket2.cpp \
+    gauge.cpp \
+    gamepadmonitor.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -47,7 +50,9 @@ HEADERS += \
     clientsocket.h \
     cvimagewidget.h \
     clientsocket2.h \
-    cvimagewidget.h
+    cvimagewidget.h \
+    gauge.h \
+    gamepadmonitor.h
 
 FORMS += \
         mainwindow.ui

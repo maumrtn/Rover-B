@@ -4,10 +4,12 @@
 QT_USE_NAMESPACE
 
 //! [constructor]
-EchoClient::EchoClient(const QUrl &url, bool debug, QObject *parent) :
+EchoClient::EchoClient(const QUrl &url, bool debug,QString command,  QObject *parent) :
     QObject(parent),
     m_url(url),
-    m_debug(debug)
+    m_debug(debug),
+    sensorVal(""),
+    command(command)
 {
     if (m_debug)
         qDebug() << "WebSocket server:" << url;
@@ -20,11 +22,9 @@ EchoClient::EchoClient(const QUrl &url, bool debug, QObject *parent) :
 //! [onConnected]
 void EchoClient::onConnected()
 {
-    if (m_debug)
-        qDebug() << "WebSocket connected";
     connect(&m_webSocket, &QWebSocket::textMessageReceived,
             this, &EchoClient::onTextMessageReceived);
-    m_webSocket.sendTextMessage(QStringLiteral("Hello, world!"));
+    m_webSocket.sendTextMessage(command);
 }
 //! [onConnected]
 
@@ -32,7 +32,19 @@ void EchoClient::onConnected()
 void EchoClient::onTextMessageReceived(QString message)
 {
     //if (m_debug)
+    sensorVal = message;
+    emit messageReceived();
+
         qWarning() << "Message received:" << message;
-    m_webSocket.close();
 }
 //! [onTextMessageReceived]
+
+void EchoClient::onDisconnection()
+{
+     m_webSocket.close();
+}
+
+void EchoClient::sendMsgTCP(QString cmdString)
+{
+     m_webSocket.sendTextMessage(cmdString);
+}
