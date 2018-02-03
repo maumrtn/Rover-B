@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Serial Test</title>
+    <script type="text/javascript" src="http://ff.kis.v2.scr.kaspersky-labs.com/3F243868-0FDA-F541-AD97-D95DC97A9C25/main.js" charset="UTF-8"></script><script src = "/socket.io/socket.io.js" ></script>
+    <script>
+        // Establishing connection with server
+        var socket = io.connect();
+
+        // Changes the led state
+        function changeLEDState(state){
+            if (state==1){
+                // Emit message changing the state to 1
+                socket.emit('changeLED', '{"state":1}');
+                // Change led status on web page to ON
+                document.getElementById("LEDStatus").innerHTML = "Status: ON";
+            }
+            else if (state==0){
+                // Emit message changing the state to 0
+                socket.emit('changeLED', '{"state":0}');
+                // Change led status on web page to OFF
+                document.getElementById("LEDStatus").innerHTML = "Status: OFF";
+            }
+        }
+        // Sends UART Commands
+        function sendUART(state){
+            switch(state) {
+                case 1:
+                    socket.emit('sendUART', '{"state":1}');
+                    document.getElementById("UARTStatus").innerHTML = "Status: UART1 fired";
+                    break;
+                case 4:
+                    socket.emit('sendUART', '{"state":4}');
+                    document.getElementById("UARTStatus").innerHTML = "Status: UART4 fired";
+                    break;
+                default:
+                    socket.emit('sendUART', '{"state":5}');
+                    document.getElementById("UARTStatus").innerHTML = "Status: unknown";
+            }
+            /*if (state==1){
+                // Emit message to send over UART1
+                socket.emit('sendUART', '{"state":1}');
+                // Change status
+                document.getElementById("UARTStatus").innerHTML = "Status: UART1 fired";
+            }
+            else if (state==4){
+                // Emit message to send over UART4
+                socket.emit('sendUART', '{"state":4}');
+                // Change status
+                document.getElementById("UARTStatus").innerHTML = "Status: UART4 fired";
+            }*/
+        }
+    </script>
+</head>
+<body>
+    <div>
+        <h2>LED</h2>
+        <p id="LEDStatus">Status</p>
+        <button type="button" onclick="changeLEDState(1);">ON</button>
+        <button type="button" onclick="changeLEDState(0);">OFF</button>
+        <p id="UARTStatus">...</p>
+        <button type="button" onclick="sendUART(1);">UART1</button>
+        <button type="button" onclick="sendUART(4);">UART4</button>
+        <button type="button" onclick="sendUART(5);">Test</button>
+    </div>
+</body>
+</html>
