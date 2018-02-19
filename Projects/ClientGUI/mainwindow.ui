@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1542</width>
-    <height>965</height>
+    <width>1571</width>
+    <height>1140</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -172,30 +172,6 @@
      </rect>
     </property>
     <layout class="QGridLayout" name="gridLayout">
-     <item row="0" column="1" colspan="2">
-      <widget class="QLineEdit" name="speedText">
-       <property name="maximumSize">
-        <size>
-         <width>25</width>
-         <height>25</height>
-        </size>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="5">
-      <widget class="QPushButton" name="createButton">
-       <property name="text">
-        <string>Create</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="3" colspan="3">
-      <widget class="QTextEdit" name="console">
-       <property name="readOnly">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
      <item row="0" column="3">
       <widget class="QLabel" name="label">
        <property name="text">
@@ -239,13 +215,37 @@
        </property>
       </widget>
      </item>
+     <item row="0" column="1" colspan="2">
+      <widget class="QLineEdit" name="speedText">
+       <property name="maximumSize">
+        <size>
+         <width>25</width>
+         <height>25</height>
+        </size>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="5">
+      <widget class="QPushButton" name="createButton">
+       <property name="text">
+        <string>Create</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="3" colspan="3">
+      <widget class="QTextEdit" name="console">
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
     </layout>
    </widget>
    <widget class="QWidget" name="gridLayoutWidget">
     <property name="geometry">
      <rect>
-      <x>0</x>
-      <y>0</y>
+      <x>10</x>
+      <y>900</y>
       <width>421</width>
       <height>381</height>
      </rect>
@@ -274,7 +274,7 @@
      <rect>
       <x>660</x>
       <y>10</y>
-      <width>861</width>
+      <width>901</width>
       <height>661</height>
      </rect>
     </property>
@@ -1044,13 +1044,36 @@
      <enum>Qt::Vertical</enum>
     </property>
    </widget>
+   <widget class="QPushButton" name="openUrl">
+    <property name="geometry">
+     <rect>
+      <x>730</x>
+      <y>680</y>
+      <width>85</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Open URL</string>
+    </property>
+   </widget>
+   <widget class="VlcWidgetVideo" name="video" native="true">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>431</width>
+      <height>411</height>
+     </rect>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1542</width>
+     <width>1571</width>
      <height>22</height>
     </rect>
    </property>
@@ -1058,7 +1081,6 @@
     <property name="title">
      <string>Settings</string>
     </property>
-    <addaction name="actionTCP_Connection"/>
    </widget>
    <addaction name="menuSettings"/>
   </widget>
@@ -1078,6 +1100,18 @@
   </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
+ <customwidgets>
+  <customwidget>
+   <class>VlcWidgetVideo</class>
+   <extends>QWidget</extends>
+   <header location="global">VLCQtWidgets/WidgetVideo.h</header>
+   <container>1</container>
+   <slots>
+    <signal>fullscreen()</signal>
+    <slot>toggleFullscreen()</slot>
+   </slots>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

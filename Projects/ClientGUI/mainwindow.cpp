@@ -5,7 +5,19 @@
 #include "qledindicator.h"
 #include "cvimagewidget.h"
 #include "gamepadmonitor.h"
+#include "simpleplayer.h"
+#include <math.h>
 
+#include <QFileDialog>
+#include <QInputDialog>
+#include <VLCQtCore/Common.h>
+#include <VLCQtCore/Instance.h>
+#include <VLCQtCore/Media.h>
+#include <VLCQtCore/MediaPlayer.h>
+#include <VLCQtCore/VideoStream.h>
+
+#include "opencv2/opencv.hpp"
+using namespace cv;
 #include <QtWidgets>
 #include <QDebug>
 #include <QFile>
@@ -17,13 +29,24 @@
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::MainWindow)
+    ui(new Ui::MainWindow),
+    _media(0)
 {
+    ui->setupUi(this);
+   // this->setStyleSheet("background-color: black;");
+
     // Time for sending of commands
     timer = new QTimer(this);
 
     timer->start(100);
 
+    // Video
+    _instance = new VlcInstance(VlcCommon::args(), this);
+    _player = new VlcMediaPlayer(_instance);
+    _player->setVideoWidget(ui->video);
+    ui->video->setMediaPlayer(_player);
+    connect(ui->openUrl, &QPushButton::clicked, this, &MainWindow::openUrl);
+    //VlcVideoStream::renderFrame();
     // Gamepad
     auto gamepads = QGamepadManager::instance()->connectedGamepads();
     if (gamepads.isEmpty()) {
@@ -38,7 +61,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(m_gamepad, &QGamepad::buttonL2Changed, this, &MainWindow::L2Changed);
     connect(m_gamepad, &QGamepad::axisRightXChanged, this, &MainWindow::rightXChanged);
     connect(m_gamepad, &QGamepad::axisRightYChanged, this, &MainWindow::rightYChanged);
-
+    connect(m_gamepad, &QGamepad::buttonYChanged, this, &MainWindow::buttonYChanged);
 
     connect(m_gamepad, &QGamepad::axisLeftYChanged, this, [](double value){
         qWarning() << "Left Y" << value;
@@ -85,7 +108,6 @@ MainWindow::MainWindow(QWidget *parent) :
 
     this->client = NULL;
 
-    ui->setupUi(this);
     //connect(ui->createButton,SIGNAL(clicked()),this,SLOT(createLog()));
 
     // Add ArrowPad
@@ -154,20 +176,22 @@ MainWindow::MainWindow(QWidget *parent) :
     imageWidget->showImage(edges);
 
 
+
+
     // Gauge widgets 1-4: From top left to top right and bottom left to bottom right
-    float arcDistance = 20;
-    float degDistance = 25;
+    float arcDistance = 30;
+    float degDistance = 35;
     float degMinVal   = 0;
     float degMaxVal   = 100;
     float colorDistance = 25;
     float colorMinVal = 0;
     float colorMaxVal = 100;
-    float valDistance = 35;
-    float valSize     = 35;
-    float labelDistance=15;
+    float valDistance = 45;
+    float valSize     = 45;
+    float labelDistance=25;
     float valMinVal   = 0;
     float valMaxVal   = 120;
-    float labelSize   = 35;
+    float labelSize   = 45;
     float needleSize  = 20;
     float needleMinVal= 0;
     float needleMaxVal= 100;
@@ -176,10 +200,10 @@ MainWindow::MainWindow(QWidget *parent) :
     RPMGauge_1 = new QcGaugeWidget;
     RPMGauge_1->addArc(arcDistance); // Radius
     RPMGauge_1->addDegrees(degDistance)->setValueRange(degMinVal,degMaxVal);
-    QcColorBand *clrBand_1 = RPMGauge_1->addColorBand(colorDistance);
-    clrBand_1->setValueRange(colorMinVal,colorMaxVal);
+    //QcColorBand *clrBand_1 = RPMGauge_1->addColorBand(colorDistance);
+    //clrBand_1->setValueRange(colorMinVal,colorMaxVal);
     RPMGauge_1->addValues(valDistance)->setValueRange(valMinVal,valMaxVal);
-    RPMGauge_1->addLabel(valSize)->setText("RPM");
+    RPMGauge_1->addLabel(labelSize)->setText("RPM");
     QcLabelItem *lab_1 = RPMGauge_1->addLabel(labelDistance);
     lab_1->setText("0");
     RPMNeedle_1 = RPMGauge_1->addNeedle(needleSize);
@@ -192,10 +216,10 @@ MainWindow::MainWindow(QWidget *parent) :
     RPMGauge_2 = new QcGaugeWidget;
     RPMGauge_2->addArc(arcDistance); // Radius
     RPMGauge_2->addDegrees(degDistance)->setValueRange(degMinVal,degMaxVal);
-    QcColorBand *clrBand_2 = RPMGauge_2->addColorBand(colorDistance);
-    clrBand_2->setValueRange(colorMinVal,colorMaxVal);
+    //QcColorBand *clrBand_2 = RPMGauge_2->addColorBand(colorDistance);
+    //clrBand_2->setValueRange(colorMinVal,colorMaxVal);
     RPMGauge_2->addValues(valDistance)->setValueRange(valMinVal,valMaxVal);
-    RPMGauge_2->addLabel(valSize)->setText("RPM");
+    RPMGauge_2->addLabel(labelSize)->setText("RPM");
     QcLabelItem *lab_2 = RPMGauge_2->addLabel(labelDistance);
     lab_2->setText("0");
     RPMNeedle_2 = RPMGauge_2->addNeedle(needleSize);
@@ -208,9 +232,9 @@ MainWindow::MainWindow(QWidget *parent) :
     RPMGauge_3 = new QcGaugeWidget;
     RPMGauge_3->addArc(arcDistance); // Radius
     RPMGauge_3->addDegrees(degDistance)->setValueRange(degMinVal,degMaxVal);
-    QcColorBand *clrBand_3 = RPMGauge_3->addColorBand(colorDistance);
-    clrBand_3->setValueRange(colorMinVal,colorMaxVal);
-    RPMGauge_3->addValues(valSize)->setValueRange(valMinVal,valMaxVal);
+    //QcColorBand *clrBand_3 = RPMGauge_3->addColorBand(colorDistance);
+    //clrBand_3->setValueRange(colorMinVal,colorMaxVal);
+    RPMGauge_3->addValues(valDistance)->setValueRange(valMinVal,valMaxVal);
     RPMGauge_3->addLabel(labelSize)->setText("RPM");
     QcLabelItem *lab_3 = RPMGauge_3->addLabel(labelDistance);
     lab_3->setText("0");
@@ -224,9 +248,9 @@ MainWindow::MainWindow(QWidget *parent) :
     RPMGauge_4 = new QcGaugeWidget;
     RPMGauge_4->addArc(arcDistance); // Radius
     RPMGauge_4->addDegrees(degDistance)->setValueRange(degMinVal,degMaxVal);
-    QcColorBand *clrBand_4 = RPMGauge_4->addColorBand(colorDistance);
-    clrBand_4->setValueRange(colorMinVal,colorMaxVal);
-    RPMGauge_4->addValues(valSize)->setValueRange(valMinVal,valMaxVal);
+    //QcColorBand *clrBand_4 = RPMGauge_4->addColorBand(colorDistance);
+    //clrBand_4->setValueRange(colorMinVal,colorMaxVal);
+    RPMGauge_4->addValues(valDistance)->setValueRange(valMinVal,valMaxVal);
     RPMGauge_4->addLabel(labelSize)->setText("RPM");
     QcLabelItem *lab_4 = RPMGauge_4->addLabel(labelDistance);
     lab_4->setText("0");
@@ -240,9 +264,9 @@ MainWindow::MainWindow(QWidget *parent) :
     RPMGauge_5 = new QcGaugeWidget;
     RPMGauge_5->addArc(arcDistance); // Radius
     RPMGauge_5->addDegrees(degDistance)->setValueRange(degMinVal,degMaxVal);
-    QcColorBand *clrBand_5 = RPMGauge_5->addColorBand(colorDistance);
-    clrBand_5->setValueRange(colorMinVal,colorMaxVal);
-    RPMGauge_5->addValues(valSize)->setValueRange(valMinVal,valMaxVal);
+    //QcColorBand *clrBand_5 = RPMGauge_5->addColorBand(colorDistance);
+    //clrBand_5->setValueRange(colorMinVal,colorMaxVal);
+    RPMGauge_5->addValues(valDistance)->setValueRange(valMinVal,valMaxVal);
     RPMGauge_5->addLabel(labelSize)->setText("RPM");
     QcLabelItem *lab_5 = RPMGauge_5->addLabel(labelDistance);
     lab_5->setText("0");
@@ -256,9 +280,9 @@ MainWindow::MainWindow(QWidget *parent) :
     RPMGauge_6 = new QcGaugeWidget;
     RPMGauge_6->addArc(arcDistance); // Radius
     RPMGauge_6->addDegrees(degDistance)->setValueRange(degMinVal,degMaxVal);
-    QcColorBand *clrBand_6 = RPMGauge_6->addColorBand(colorDistance);
-    clrBand_6->setValueRange(colorMinVal,colorMaxVal);
-    RPMGauge_6->addValues(valSize)->setValueRange(valMinVal,valMaxVal);
+    //QcColorBand *clrBand_6 = RPMGauge_6->addColorBand(colorDistance);
+    //clrBand_6->setValueRange(colorMinVal,colorMaxVal);
+    RPMGauge_6->addValues(valDistance)->setValueRange(valMinVal,valMaxVal);
     RPMGauge_6->addLabel(labelSize)->setText("RPM");
     QcLabelItem *lab_6 = RPMGauge_6->addLabel(labelDistance);
     lab_6->setText("0");
@@ -290,31 +314,31 @@ MainWindow::MainWindow(QWidget *parent) :
 
     QcLabelItem *n_1 = servoGauge_1->addLabel(nSize);
     n_1->setText("-90");
-    n_1->setAngle(90);
+    n_1->setAngle(0);
     n_1->setColor(Qt::black);
 
     QcLabelItem *e_1 = servoGauge_1->addLabel(nSize);
     e_1->setText("0");
-    e_1->setAngle(180);
+    e_1->setAngle(90);
     e_1->setColor(Qt::black);
 
     QcLabelItem *s_1 = servoGauge_1->addLabel(nSize);
     s_1->setText("90");
-    s_1->setAngle(270);
+    s_1->setAngle(180);
     s_1->setColor(Qt::black);
 
     QcDegreesItem *deg_1 = servoGauge_1->addDegrees(degSize);
     deg_1->setStep(5);
-    deg_1->setMaxDegree(270);
-    deg_1->setMinDegree(90);
+    deg_1->setMaxDegree(250);
+    deg_1->setMinDegree(-70);
     deg_1->setColor(Qt::white);
     servoNeedle_1 = servoGauge_1->addNeedle(needleSizeServo);
     //mCompassNeedle->setNeedle(QcNeedleItem::CompassNeedle);
-    servoNeedle_1->setValueRange(-90,90);
-    servoNeedle_1->setMaxDegree(270);
-    servoNeedle_1->setMinDegree(90);
-    servoGauge_1->addBackground(7/4);
-    servoGauge_1->addGlass(bkg2Size/4);
+    servoNeedle_1->setValueRange(-160,160);
+    servoNeedle_1->setMaxDegree(160);
+    servoNeedle_1->setMinDegree(-160);
+    servoGauge_1->addBackground(7);
+    servoGauge_1->addGlass(bkg2Size);
 
     // Servo 2
     servoGauge_2 = new QcGaugeWidget;
@@ -332,29 +356,29 @@ MainWindow::MainWindow(QWidget *parent) :
 
     QcLabelItem *n_2 = servoGauge_2->addLabel(nSize);
     n_2->setText("-90");
-    n_2->setAngle(90);
+    n_2->setAngle(0);
     n_2->setColor(Qt::black);
 
     QcLabelItem *e_2 = servoGauge_2->addLabel(nSize);
     e_2->setText("0");
-    e_2->setAngle(180);
+    e_2->setAngle(90);
     e_2->setColor(Qt::black);
 
     QcLabelItem *s_2 = servoGauge_2->addLabel(nSize);
     s_2->setText("90");
-    s_2->setAngle(270);
+    s_2->setAngle(180);
     s_2->setColor(Qt::black);
 
     QcDegreesItem *deg_2 = servoGauge_2->addDegrees(degSize);
     deg_2->setStep(5);
-    deg_2->setMaxDegree(270);
-    deg_2->setMinDegree(90);
+    deg_2->setMaxDegree(250);
+    deg_2->setMinDegree(-70);
     deg_2->setColor(Qt::white);
     servoNeedle_2 = servoGauge_2->addNeedle(needleSizeServo);
     //mCompassNeedle->setNeedle(QcNeedleItem::CompassNeedle);
-    servoNeedle_2->setValueRange(-90,90);
-    servoNeedle_2->setMaxDegree(270);
-    servoNeedle_2->setMinDegree(90);
+    servoNeedle_2->setValueRange(-160,160);
+    servoNeedle_2->setMaxDegree(160);
+    servoNeedle_2->setMinDegree(-160);
     servoGauge_2->addBackground(7);
     servoGauge_2->addGlass(bkg2Size);
 
@@ -375,29 +399,29 @@ MainWindow::MainWindow(QWidget *parent) :
 
     QcLabelItem *n_3 = servoGauge_3->addLabel(nSize);
     n_3->setText("-90");
-    n_3->setAngle(90);
+    n_3->setAngle(0);
     n_3->setColor(Qt::black);
 
     QcLabelItem *e_3 = servoGauge_3->addLabel(nSize);
     e_3->setText("0");
-    e_3->setAngle(180);
+    e_3->setAngle(90);
     e_3->setColor(Qt::black);
 
     QcLabelItem *s_3 = servoGauge_3->addLabel(nSize);
     s_3->setText("90");
-    s_3->setAngle(270);
+    s_3->setAngle(180);
     s_3->setColor(Qt::black);
 
     QcDegreesItem *deg_3 = servoGauge_3->addDegrees(degSize);
     deg_3->setStep(5);
-    deg_3->setMaxDegree(270);
-    deg_3->setMinDegree(90);
+    deg_3->setMaxDegree(250);
+    deg_3->setMinDegree(-70);
     deg_3->setColor(Qt::white);
     servoNeedle_3 = servoGauge_3->addNeedle(needleSizeServo);
     //mCompassNeedle->setNeedle(QcNeedleItem::CompassNeedle);
-    servoNeedle_3->setValueRange(-90,90);
-    servoNeedle_3->setMaxDegree(270);
-    servoNeedle_3->setMinDegree(90);
+    servoNeedle_3->setValueRange(-160,160);
+    servoNeedle_3->setMaxDegree(160);
+    servoNeedle_3->setMinDegree(-160);
     servoGauge_3->addBackground(7);
     servoGauge_3->addGlass(bkg2Size);
 
@@ -418,29 +442,29 @@ MainWindow::MainWindow(QWidget *parent) :
 
     QcLabelItem *n_4 = servoGauge_4->addLabel(nSize);
     n_4->setText("-90");
-    n_4->setAngle(90);
+    n_4->setAngle(0);
     n_4->setColor(Qt::black);
 
     QcLabelItem *e_4 = servoGauge_4->addLabel(nSize);
     e_4->setText("0");
-    e_4->setAngle(180);
+    e_4->setAngle(90);
     e_4->setColor(Qt::black);
 
     QcLabelItem *s_4 = servoGauge_4->addLabel(nSize);
     s_4->setText("90");
-    s_4->setAngle(270);
+    s_4->setAngle(180);
     s_4->setColor(Qt::black);
 
     QcDegreesItem *deg_4 = servoGauge_4->addDegrees(degSize);
     deg_4->setStep(5);
-    deg_4->setMaxDegree(270);
-    deg_4->setMinDegree(90);
+    deg_4->setMaxDegree(250);
+    deg_4->setMinDegree(-70);
     deg_4->setColor(Qt::white);
     servoNeedle_4 = servoGauge_4->addNeedle(needleSizeServo);
     //mCompassNeedle->setNeedle(QcNeedleItem::CompassNeedle);
-    servoNeedle_4->setValueRange(-90,90);
-    servoNeedle_4->setMaxDegree(270);
-    servoNeedle_4->setMinDegree(90);
+    servoNeedle_4->setValueRange(-160,160);
+    servoNeedle_4->setMaxDegree(160);
+    servoNeedle_4->setMinDegree(-160);
     servoGauge_4->addBackground(7);
     servoGauge_4->addGlass(bkg2Size);
 
@@ -597,8 +621,24 @@ void toogleLED(QLedIndicator * led)
 
 void MainWindow::on_initServo_clicked()
 {
-    servoLED->toggle();
-    ui->console->append("Starting initialization of servos...");
+    if (initServo==false)
+    {
+        initServo = !initServo;
+        servoLED->toggle();
+        ui->console->append("Initializing servos...");
+    }else
+    {
+        ui->console->append("Initializing again servos...");
+    }
+
+    QJsonObject msg;
+    msg.insert("cmd", QJsonValue::fromVariant("init"));
+    msg.insert("data", QJsonValue::fromVariant("servoReset"));
+
+    QJsonDocument doc(msg);
+    QString strJson(doc.toJson(QJsonDocument::Compact));
+    emit sendMsg(strJson);
+
 }
 
 
@@ -625,6 +665,14 @@ void MainWindow::on_initCam_clicked()
 {
     camLED->toggle();
     ui->console->append("Starting initialization of Cam..");
+    VideoCapture cap(0);
+    Mat frame;
+    Mat edges;
+    cap >> frame; // get a new frame from camera
+    cvtColor(frame, edges, COLOR_BGR2GRAY);
+    GaussianBlur(edges, edges, Size(7,7), 1.5, 1.5);
+    Canny(edges, edges, 0, 30, 3);
+    imshow("edges", edges);
 }
 
 
@@ -636,7 +684,7 @@ void MainWindow::on_connectButton_clicked()
     {
         bool debug = 1;
         QString command = "1";
-        this->client = new EchoClient(QUrl(QStringLiteral("ws://192.168.7.2:1234")), debug,command);
+        this->client = new EchoClient(QUrl(QStringLiteral("ws://192.168.7.2:1234")), debug,command);//Beagle bone ws://192.168.7.2:1234//IRS Konferenz:ws://192.168.21.174:8888
 
         if (this->client->sensorVal != NULL)
         {
@@ -647,8 +695,15 @@ void MainWindow::on_connectButton_clicked()
         connect(ui->connectButton_2,SIGNAL(clicked(bool)),this->client,SLOT(onDisconnection()));
         connect(ui->connectButton_2,SIGNAL(clicked(bool)),this,SLOT(onDisconnection()));
         connect(this->client,SIGNAL(messageReceived()),this,SLOT(onMessageReceived()));
-        connect(timer, SIGNAL(timeout()), this, SLOT(update()));
-        connect(this,SIGNAL(sendMsg(QString)),this->client,SLOT(sendMsgTCP(QString)));
+        if (m_gamepad== NULL)
+        {
+            ui->console->append("Warning: Controller is not connected yet!");
+        }else
+        {
+            connect(timer, SIGNAL(timeout()), this, SLOT(update()));
+            connect(this,SIGNAL(sendMsg(QString)),this->client,SLOT(sendMsgTCP(QString)));
+        }
+
     }
     else
     {
@@ -961,9 +1016,41 @@ void MainWindow::R2Changed()
 {
     ui->roverVel->setValue(static_cast<int>(m_gamepad->buttonR2()*100));
 }
+void MainWindow::buttonYChanged()
+{
+
+    flagDropClicked = !flagDropClicked;
+
+    if (flagDropClicked)
+    {
+        flagDrop = !flagDrop;
+        QString flagDropString = QString::number(flagDrop);
+        if (flagDropString.compare("1")==0)
+        {
+            flagDropString = "true";
+        }
+        else if (flagDropString.compare("0")==0)
+        {
+            flagDropString = "false";
+        }
+        else
+        {
+            flagDropString = "error";
+        }
+
+        ui->console->append("Dropping the flag...: "+flagDropString);
+        QJsonObject msg;
+        msg.insert("cmd", QJsonValue::fromVariant("flag"));
+        msg.insert("data", QJsonValue::fromVariant(flagDrop));
+        QJsonDocument doc(msg);
+        QString strJson(doc.toJson(QJsonDocument::Compact));
+        emit sendMsg(strJson);
+    }
+}
+
 void MainWindow::L2Changed()
 {
-    ui->console->append(QString::number(m_gamepad->buttonR2()));
+    //ui->console->append(QString::number(m_gamepad->buttonR2()));
     if (m_gamepad->buttonR2()==0)
     {
         ui->roverVel->setValue(static_cast<int>(-m_gamepad->buttonL2()*100));
@@ -976,52 +1063,79 @@ void MainWindow::L2Changed()
 
 void MainWindow::update()
 {
+
     if(m_gamepad!=NULL)
     {
     // Debug
-    ui->console->append(QString::number(m_gamepad->axisLeftX()));
+    /*ui->console->append(QString::number(m_gamepad->axisLeftX()));
     ui->console->append(QString::number(m_gamepad->axisLeftY()));
-    ui->console->append(QString::number(m_gamepad->axisRightY()));
+    ui->console->append(QString::number(m_gamepad->axisRightY()));*/
     // Create JSON File and send via TCP
     // Drive input
-    QJsonObject msg;
-    msg.insert("cmd", QJsonValue::fromVariant("drive"));
-    // Check if right button is activated
+    if ((gamepadDrive!=m_gamepad->buttonL2())||gamepadDrive!=m_gamepad->buttonR2())
+    {
+        QJsonObject msg;
+        msg.insert("cmd", QJsonValue::fromVariant("drive"));
+        // Check if right button is activated
+        if(m_gamepad->buttonR2()==0) // Send L2
+        {
+            msg.insert("data", QJsonValue::fromVariant(round(-m_gamepad->buttonL2()*64+64)));
+        }else // Send R2
+        {
+            msg.insert("data", QJsonValue::fromVariant(round(m_gamepad->buttonR2()*63+64)));
+        }
+
+        QJsonDocument doc(msg);
+        QString strJson(doc.toJson(QJsonDocument::Compact));
+        emit sendMsg(strJson);
+    }
     if(m_gamepad->buttonR2()==0) // Send L2
     {
-        msg.insert("data", QJsonValue::fromVariant(m_gamepad->buttonL2()));
-    }else // Send R2
+        gamepadDrive = m_gamepad->buttonL2();
+    }else
     {
-        msg.insert("data", QJsonValue::fromVariant(m_gamepad->buttonR2()));
+        gamepadDrive = m_gamepad->buttonR2();
     }
 
-    QJsonDocument doc(msg);
-    QString strJson(doc.toJson(QJsonDocument::Compact));
-    emit sendMsg(strJson);
 
     // Steering input
-    QJsonObject msg2;
-    msg2.insert("cmd", QJsonValue::fromVariant("steer"));
-    msg2.insert("data", QJsonValue::fromVariant(m_gamepad->axisLeftX()));
-    QJsonDocument doc2(msg2);
-    QString strJson2(doc2.toJson(QJsonDocument::Compact));
-    emit sendMsg(strJson2);
+    double steeringVal = m_gamepad->axisLeftX(); // From -1 to 1
+    double grad        = 80.0; // max steering in deg
+    double steps       = 1023.0/320.0*grad*2.0;
+    double L           = 0.33; // Distance from wheel in rear and front
+    double B           = 0.39;
+    double lowerVal    = (1023.0-steps)/2.0;
+    double upperVal    = lowerVal + steps;
+    double cmd_dez     = (upperVal-512.0)*steeringVal+512.0;
+
+    if (steeringVal!=gamepadAxisLeftX)
+    {
+        QJsonObject msg2;
+        msg2.insert("cmd", QJsonValue::fromVariant("steer"));
+        msg2.insert("data", QJsonValue::fromVariant(round(cmd_dez)));
+        QJsonDocument doc2(msg2);
+        QString strJson2(doc2.toJson(QJsonDocument::Compact));
+        emit sendMsg(strJson2);
+    }
+    gamepadAxisLeftX   = steeringVal; // to check old one
 
     // Camera tilt input
-    QJsonObject msg3;
-    QJsonObject panTiltData;
-    msg3.insert("cmd", QJsonValue::fromVariant("pantilt"));
-    panTiltData.insert("pan", QJsonValue::fromVariant(m_gamepad->axisRightX()));
-    panTiltData.insert("tilt", QJsonValue::fromVariant(m_gamepad->axisRightY()));
-    msg3.insert("data",panTiltData);
-    QJsonDocument doc3(msg3);
-    QString strJson3(doc3.toJson(QJsonDocument::Compact));
-    emit sendMsg(strJson3);
-    }
-    /*if (m_gamepad->axisRightY() != 0)
+    if((m_gamepad->axisRightX()!=gamepadAxisRightX)|| (m_gamepad->axisRightY()!=gamepadAxisRightY))
     {
+        QJsonObject msg3;
+        QJsonObject panTiltData;
+        msg3.insert("cmd", QJsonValue::fromVariant("pantilt"));
+        panTiltData.insert("pan", QJsonValue::fromVariant(round(127.0*m_gamepad->axisRightX()+127.0)));
+        panTiltData.insert("tilt", QJsonValue::fromVariant(round(-127.0*m_gamepad->axisRightY()+127.0)));
 
-    }*/
+        msg3.insert("data",panTiltData);
+        QJsonDocument doc3(msg3);
+        QString strJson3(doc3.toJson(QJsonDocument::Compact));
+        emit sendMsg(strJson3);
+    }
+    gamepadAxisRightX = m_gamepad->axisRightX();
+    gamepadAxisRightY = m_gamepad->axisRightY();
+    }
 
 
 }
@@ -1048,3 +1162,17 @@ void MainWindow::on_flagDrop_clicked()
     QString strJson(doc.toJson(QJsonDocument::Compact));
     emit sendMsg(strJson);
 }
+
+void MainWindow::openUrl()
+{
+    QString url =
+            QInputDialog::getText(this, tr("Open Url"), tr("Enter the URL you want to play"));
+
+    if (url.isEmpty())
+        return;
+
+    _media = new VlcMedia(url, _instance);
+
+    _player->open(_media);
+}
+

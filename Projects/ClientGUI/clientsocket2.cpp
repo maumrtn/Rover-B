@@ -24,7 +24,7 @@ void EchoClient::onConnected()
 {
     connect(&m_webSocket, &QWebSocket::textMessageReceived,
             this, &EchoClient::onTextMessageReceived);
-    m_webSocket.sendTextMessage(command);
+    //m_webSocket.sendTextMessage(command);
 }
 //! [onConnected]
 

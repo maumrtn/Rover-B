@@ -20,6 +20,11 @@ class MainWindow;
 }
 
 class ArrowPad;
+class VlcInstance;
+class VlcMedia;
+class VlcMediaPlayer;
+class MyVideoStream;
+class settingsWindow;
 
 class MainWindow : public QMainWindow
 {
@@ -52,15 +57,14 @@ private slots:
     void L2Changed();
     void rightXChanged();
     void rightYChanged();
+    void buttonYChanged();
     void update();
-
     void onDisconnection();
     void onMessageReceived();
-
     void on_PointTurn_clicked();
-
-
+    void openUrl();
     void on_flagDrop_clicked();
+    //void openSettings();
 
 private:
     Ui::MainWindow *ui;
@@ -101,6 +105,19 @@ private:
     QTimer *timer;
     bool turnPoint = false;
     bool flagDrop = false;
+    bool flagDropClicked = false;
+    bool initServo = false;
+
+    VlcInstance *_instance;
+    VlcMedia *_media;
+    VlcMediaPlayer *_player;
+
+    double gamepadAxisLeftX  = 0.0;
+    double gamepadAxisRightX = 0.0;
+    double gamepadAxisRightY = 0.0;
+    double gamepadDrive      = 0.0;
+
+    settingsWindow *mMyNewWindow;
 
 
 
